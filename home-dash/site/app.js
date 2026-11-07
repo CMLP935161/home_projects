@@ -74,7 +74,7 @@ function parseScoreboard(json, league) {
         away: sides.away, home: sides.home, state: state, live: state === "in",
         status: state === "pre" ? clock12(new Date(comp.date || ev.date)) : (st.shortDetail || st.description || ""),
         poss: ids[String(sit.possession)] || null,
-        down: sit.shortDownDistanceText || sit.downDistanceText || null,
+        down: sit.downDistanceText || sit.shortDownDistanceText || null,
         redzone: !!sit.isRedZone
       };
     } catch (e) {}

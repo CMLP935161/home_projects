@@ -326,7 +326,8 @@ def parse_game(ev, league):
     if league in ("NFL", "NCAA") and state == "in":
         sit = comp.get("situation") or {}
         poss = ids.get(str(sit.get("possession")))
-        down = sit.get("shortDownDistanceText") or sit.get("downDistanceText") or None
+        # long form includes the ball position, e.g. "1st & 10 at KC 38"
+        down = sit.get("downDistanceText") or sit.get("shortDownDistanceText") or None
         redzone = bool(sit.get("isRedZone"))
     return {
         "poss": poss,
