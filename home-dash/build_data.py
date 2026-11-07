@@ -5,7 +5,7 @@ Runs on GitHub Actions every 15 minutes. The pages in site/ only read data.json.
 import json
 import os
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo("America/Los_Angeles")
@@ -353,9 +353,49 @@ def games_for(league, now):
     return out
 
 
+def nebraska_week_game(now):
+    """Nebraska's game this college-football week (Tuesday to Monday), whatever
+    day it is played: Thursday/Friday games and bye weeks are handled."""
+    delta = (now.weekday() - 1) % 7  # days since Tuesday
+    start = (now - timedelta(days=delta)).replace(hour=0, minute=0, second=0, microsecond=0)
+    end = start + timedelta(days=7)
+    events = [
+        e for e in parse_events(fetch_schedule("football/college-football", "158"))
+        if start <= e["when"] < end
+    ]
+    if not events:
+        return None
+    e = events[0]
+    pre = e["state"] == "pre"
+    me = {"abbr": "NEB", "score": None if pre else e["my_score"], "rank": None,
+          "fav": True, "win": e["winner"] is True}
+    opp = {"abbr": e["opp"], "score": None if pre else e["opp_score"], "rank": None,
+           "fav": False, "win": e["winner"] is False}
+    if pre:
+        status = e["when"].strftime("%a %-I:%M %p")
+    elif e["state"] == "in":
+        status = e["detail"]
+    else:
+        status = e["detail"] or "Final"
+        if e["when"].date() != now.date():
+            status += ", " + e["when"].strftime("%a")
+    return {
+        "poss": None, "down": None, "redzone": False,
+        "league": "NCAA",
+        "away": opp if e["home"] else me,
+        "home": me if e["home"] else opp,
+        "status": status,
+        "state": e["state"],
+        "live": e["state"] == "in",
+        "fav": True,
+        "when": e["when"].timestamp(),
+    }
+
+
 def build_view(now):
     """Saturday: Nebraska + Top 25 matchups. Sunday: full NFL slate.
-    Any day: favorite teams that play today. Otherwise 'favorites' mode."""
+    Nebraska's game for the week always appears. Any day: favorite teams that
+    play today. Otherwise 'favorites' mode."""
     dow = now.weekday()  # Mon=0 ... Sat=5, Sun=6
     sections, used = [], set()
 
@@ -375,6 +415,24 @@ def build_view(now):
             sections.append({"key": "NFL", "title": "NFL", "games": games[:16]})
             used.add("NFL")
 
+    try:
+        neb = nebraska_week_game(now)
+    except Exception:
+        neb = None
+
+    def is_neb(g):
+        return g["away"]["abbr"] == "NEB" or g["home"]["abbr"] == "NEB"
+
+    neb_in_sections = any(is_neb(g) for s in sections for g in s["games"])
+    if neb and not neb_in_sections and dow == 5:
+        ncaa = next((s for s in sections if s["key"] == "NCAA"), None)
+        if ncaa:
+            ncaa["games"].insert(0, neb)
+        else:
+            sections.append({"key": "NCAA", "title": "College Football · Top 25", "games": [neb]})
+            used.add("NCAA")
+        neb_in_sections = True
+
     if not sections:
         return {"mode": "favorites", "sections": []}
 
@@ -386,9 +444,11 @@ def build_view(now):
             extra += [g for g in games_for(lg, now) if g["fav"]]
         except Exception:
             continue
+    extra.sort(key=lambda g: g["when"])
+    if neb and not neb_in_sections and not any(is_neb(g) for g in extra):
+        extra.insert(0, neb)
     if extra:
-        extra.sort(key=lambda g: g["when"])
-        sections.append({"key": "TODAY", "title": "Your teams today", "games": extra})
+        sections.append({"key": "TODAY", "title": "Your teams", "games": extra})
     return {"mode": "slate", "sections": sections}
 
 
