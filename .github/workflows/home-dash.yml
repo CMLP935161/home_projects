@@ -27,6 +27,8 @@ jobs:
           python-version: "3.12"
       - run: python build_data.py
         working-directory: home-dash
+      - name: Cache-bust CSS and JS so tablets pick up updates
+        run: sed -i "s#app.js#app.js?v=${GITHUB_RUN_ID}#; s#style.css#style.css?v=${GITHUB_RUN_ID}#" home-dash/site/*.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: home-dash/site
