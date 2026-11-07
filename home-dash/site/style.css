@@ -80,6 +80,13 @@ body {
 .sc + .dash { margin: 0; }
 .gs { font-size: .8rem; color: #9fb0c3; text-align: right; margin-left: .6rem; white-space: nowrap; }
 .gi.live .gs { color: #ff8a8a; font-weight: 600; }
+.gi.redz { background: #2a1518; }
+.rz { display: inline-block; background: #ff5252; color: #1a0a0c; font-size: .68rem; font-weight: 800; letter-spacing: .08em; padding: .08rem .4rem; border-radius: .25rem; margin-right: .35rem; }
+.dn { font-size: .74rem; font-weight: 500; color: #cfd9e4; margin-top: .1rem; }
+.ball { font-size: .8rem; margin-left: .25rem; }
+.flash { display: inline-block; background: #ffd54f; color: #231a00; font-size: .7rem; font-weight: 800; letter-spacing: .06em; padding: .05rem .4rem; border-radius: .25rem; margin-left: .4rem; vertical-align: .1em; -webkit-animation: blink 1s ease-in-out infinite; animation: blink 1s ease-in-out infinite; }
+@-webkit-keyframes blink { 50% { opacity: .35; } }
+@keyframes blink { 50% { opacity: .35; } }
 
 #stale { color: #ffb74d; font-size: .9rem; font-weight: 500; }
 #updated { color: #5f7185; font-size: .8rem; text-align: right; margin-top: .3rem; }

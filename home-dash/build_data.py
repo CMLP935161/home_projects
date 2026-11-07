@@ -300,9 +300,11 @@ def parse_game(ev, league):
         when = when.replace(tzinfo=timezone.utc)
     when = when.astimezone(TZ)
     sides = {}
+    ids = {}
     for c in comp["competitors"]:
         t = c.get("team", {})
         abbr = t.get("abbreviation") or t.get("shortDisplayName", "?")
+        ids[str(t.get("id"))] = abbr
         rank = (c.get("curatedRank") or {}).get("current")
         rank = rank if isinstance(rank, int) and 1 <= rank <= 25 else None
         fav = abbr in FAV_ABBR[league] or (league == "NCAA" and str(t.get("id")) == "158")
@@ -318,7 +320,18 @@ def parse_game(ev, league):
         status = when.strftime("%-I:%M %p")
     else:
         status = st.get("shortDetail") or st.get("description") or ""
+    # Football only: who has the ball, down & distance, and red zone (live games).
+    poss = down = None
+    redzone = False
+    if league in ("NFL", "NCAA") and state == "in":
+        sit = comp.get("situation") or {}
+        poss = ids.get(str(sit.get("possession")))
+        down = sit.get("shortDownDistanceText") or sit.get("downDistanceText") or None
+        redzone = bool(sit.get("isRedZone"))
     return {
+        "poss": poss,
+        "down": down,
+        "redzone": redzone,
         "league": league,
         "away": away,
         "home": home,
