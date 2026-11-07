@@ -132,8 +132,21 @@ function anyLive() {
   return false;
 }
 
+var LAST_POLL = 0;
+function dataAgeMin() {
+  return DATA && DATA.updated_epoch ? (new Date().getTime() / 1000 - DATA.updated_epoch) / 60 : 0;
+}
 function pollLive() {
-  if (!anyLive()) { return; }
+  /* poll while a game is live, or (slower) when the built data has gone stale,
+     e.g. GitHub skipped scheduled rebuilds */
+  var live = anyLive();
+  if (!DATA || !DATA.view || DATA.view.mode !== "slate") { return; }
+  if (!live) {
+    if (dataAgeMin() < 20) { return; }
+    var t = new Date().getTime();
+    if (t - LAST_POLL < 120000) { return; }
+    LAST_POLL = t;
+  }
   var leagues = {}, d = new Date();
   var ymd = d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());
   for (var i = 0; i < DATA.view.sections.length; i++) {
