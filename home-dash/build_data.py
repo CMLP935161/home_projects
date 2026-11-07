@@ -392,6 +392,53 @@ def nebraska_week_game(now):
     }
 
 
+# Teams whose next game (with line and TV) is shown, by weekday (Mon=0).
+NEXT_UP = {
+    5: [("Nebraska", "NCAA", "football/college-football", "158", "NEB")],
+    6: [
+        ("Packers", "NFL", "football/nfl", "gb", "GB"),
+        ("Chiefs", "NFL", "football/nfl", "kc", "KC"),
+        ("Texans", "NFL", "football/nfl", "hou", "HOU"),
+    ],
+}
+
+
+def next_game_card(name, league, path, slug, abbr, now):
+    """Next upcoming game for a team: when, opponent, TV, betting line, over/under."""
+    upcoming = [
+        e for e in parse_events(fetch_schedule(path, slug))
+        if e["state"] == "pre" and e["when"] >= now
+    ]
+    if not upcoming:
+        return None
+    e = upcoming[0]
+    line = ou = tv = None
+    try:  # the scoreboard for that date carries the odds and broadcast info
+        for ev in fetch_scoreboard(league, e["when"]).get("events", []):
+            comp = ev["competitions"][0]
+            abbrs = [c.get("team", {}).get("abbreviation") for c in comp.get("competitors", [])]
+            if abbr not in abbrs:
+                continue
+            odds = (comp.get("odds") or [{}])[0]
+            line = odds.get("details") or None
+            ou = odds.get("overUnder")
+            names = [n for b in comp.get("broadcasts", []) for n in b.get("names", [])]
+            tv = ", ".join(names[:2]) or None
+            break
+    except Exception:
+        pass
+    when_txt = "Today " if e["when"].date() == now.date() else e["when"].strftime("%a %-m/%-d ")
+    when_txt += e["when"].strftime("%-I:%M %p")
+    return {
+        "team": name,
+        "matchup": ("vs " if e["home"] else "@ ") + e["opp"],
+        "when": when_txt,
+        "tv": tv,
+        "line": line,
+        "ou": ou,
+    }
+
+
 def build_view(now):
     """Saturday: Nebraska + Top 25 matchups. Sunday: full NFL slate.
     Nebraska's game for the week always appears. Any day: favorite teams that
@@ -449,6 +496,17 @@ def build_view(now):
     extra.sort(key=lambda g: g["when"])
     if extra:
         sections.append({"key": "TODAY", "title": "Your teams", "games": extra})
+
+    cards = []
+    for name, lg, path, slug, abbr in NEXT_UP.get(dow, []):
+        try:
+            card = next_game_card(name, lg, path, slug, abbr, now)
+        except Exception:
+            card = None
+        if card:
+            cards.append(card)
+    if cards:
+        sections.append({"key": "NEXT", "title": "Next up", "cards": cards})
     return {"mode": "slate", "sections": sections}
 
 

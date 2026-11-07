@@ -90,6 +90,18 @@ body {
 @-webkit-keyframes blink { 50% { opacity: .35; } }
 @keyframes blink { 50% { opacity: .35; } }
 
+/* "Next up" cards: next game with line and TV. */
+.cards { display: flex; margin: 0 -.3rem; }
+.nc { flex: 1; min-width: 0; box-sizing: border-box; margin: .12rem .3rem; background: #141b24; border-left: .25rem solid #8ecae6; border-radius: .4rem; padding: .4rem .8rem; }
+.cards.one .nc { flex: none; width: 50%; max-width: 31rem; }
+.nr { display: flex; justify-content: space-between; align-items: baseline; }
+.nt { font-size: 1.05rem; font-weight: 600; }
+.ntv { font-size: .75rem; font-weight: 600; letter-spacing: .06em; color: #9fb0c3; margin-left: .5rem; }
+.nm { font-size: .88rem; color: #cfd9e4; margin-top: .12rem; }
+.nl { font-size: .88rem; font-weight: 600; color: #e6c07b; margin-top: .08rem; }
+.nolx { color: #7d8fa3; font-weight: 400; }
+@media (max-width: 1100px) { .nm, .nl { font-size: .98rem; } .ntv { font-size: .85rem; } }
+
 #stale { color: #ffb74d; font-size: .9rem; font-weight: 500; }
 #updated { color: #5f7185; font-size: .8rem; text-align: right; margin-top: .3rem; }
 

@@ -27,7 +27,7 @@ function checkStale() {
   $("stale").innerHTML = ageMin > 120 ? "Data is " + Math.round(ageMin / 60) + "h old" : "";
 }
 
-var LG_COLORS = { NFL: "#4aa3ff", NCAA: "#ff7a59", NHL: "#7bd88f", MLB: "#f2c14e", TODAY: "#c9a0ff" };
+var LG_COLORS = { NFL: "#4aa3ff", NCAA: "#ff7a59", NHL: "#7bd88f", MLB: "#f2c14e", TODAY: "#c9a0ff", NEXT: "#8ecae6" };
 
 /* ---- live updates: poll ESPN straight from the tablet while a game is live ---- */
 var POLL_MS = (function () {
@@ -97,7 +97,7 @@ function applyLive(league, map) {
   LIVE.seeded[league] = true;
   var now = new Date().getTime();
   for (var i = 0; i < DATA.view.sections.length; i++) {
-    var games = DATA.view.sections[i].games;
+    var games = DATA.view.sections[i].games || [];
     for (var j = 0; j < games.length; j++) {
       var g = games[j];
       if (g.league !== league) { continue; }
@@ -124,8 +124,9 @@ function applyLive(league, map) {
 function anyLive() {
   if (!DATA || !DATA.view || DATA.view.mode !== "slate") { return false; }
   for (var i = 0; i < DATA.view.sections.length; i++) {
-    for (var j = 0; j < DATA.view.sections[i].games.length; j++) {
-      if (DATA.view.sections[i].games[j].live) { return true; }
+    var gs = DATA.view.sections[i].games || [];
+    for (var j = 0; j < gs.length; j++) {
+      if (gs[j].live) { return true; }
     }
   }
   return false;
@@ -136,7 +137,8 @@ function pollLive() {
   var leagues = {}, d = new Date();
   var ymd = d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());
   for (var i = 0; i < DATA.view.sections.length; i++) {
-    for (var j = 0; j < DATA.view.sections[i].games.length; j++) { leagues[DATA.view.sections[i].games[j].league] = true; }
+    var gs = DATA.view.sections[i].games || [];
+    for (var j = 0; j < gs.length; j++) { leagues[gs[j].league] = true; }
   }
   for (var lg in leagues) {
     if (leagues.hasOwnProperty(lg) && LG_PATHS[lg]) { fetchLeague(lg, ymd); }
@@ -187,13 +189,31 @@ function gameHtml(g) {
     "<div class='gs'>" + st + dn + "</div></div></div>";
 }
 
+function cardHtml(c) {
+  var parts = [];
+  if (c.line) { parts.push("Line " + esc(c.line)); }
+  if (c.ou !== null && c.ou !== undefined) { parts.push("O/U " + esc(c.ou)); }
+  var odds = parts.length ? parts.join(" &middot; ") : "<span class='nolx'>Line not posted yet</span>";
+  return "<div class='nc'><div class='nr'><span class='nt'>" + esc(c.team) + "</span>" +
+    (c.tv ? "<span class='ntv'>" + esc(c.tv) + "</span>" : "") + "</div>" +
+    "<div class='nm'>" + esc(c.matchup) + " &middot; " + esc(c.when) + "</div>" +
+    "<div class='nl'>" + odds + "</div></div>";
+}
+
 function renderSlate(sections) {
   var out = "<div class='slate'>";
   for (var i = 0; i < sections.length; i++) {
     var sec = sections[i];
-    out += "<div class='lgh' style='color:" + (LG_COLORS[sec.key] || "#9fb0c3") + "'>" + esc(sec.title) + "</div><div class='games'>";
-    for (var j = 0; j < sec.games.length; j++) { out += gameHtml(sec.games[j]); }
-    out += "</div>";
+    out += "<div class='lgh' style='color:" + (LG_COLORS[sec.key] || "#9fb0c3") + "'>" + esc(sec.title) + "</div>";
+    if (sec.cards) {
+      out += "<div class='cards" + (sec.cards.length === 1 ? " one" : "") + "'>";
+      for (var k = 0; k < sec.cards.length; k++) { out += cardHtml(sec.cards[k]); }
+      out += "</div>";
+    } else {
+      out += "<div class='games'>";
+      for (var j = 0; j < sec.games.length; j++) { out += gameHtml(sec.games[j]); }
+      out += "</div>";
+    }
   }
   return out + "</div>";
 }
