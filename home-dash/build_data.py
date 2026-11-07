@@ -415,10 +415,12 @@ def build_view(now):
             sections.append({"key": "NFL", "title": "NFL", "games": games[:16]})
             used.add("NFL")
 
-    try:
-        neb = nebraska_week_game(now)
-    except Exception:
-        neb = None
+    neb = None
+    if dow == 5:  # Saturday only: Nebraska stays with the other college games
+        try:
+            neb = nebraska_week_game(now)
+        except Exception:
+            neb = None
 
     def is_neb(g):
         return g["away"]["abbr"] == "NEB" or g["home"]["abbr"] == "NEB"
@@ -438,15 +440,13 @@ def build_view(now):
 
     extra = []
     for lg in TODAY_LEAGUES:
-        if lg in used:
+        if lg in used or (lg == "NCAA" and dow == 6):  # college stays out of Sundays
             continue
         try:
             extra += [g for g in games_for(lg, now) if g["fav"]]
         except Exception:
             continue
     extra.sort(key=lambda g: g["when"])
-    if neb and not neb_in_sections and not any(is_neb(g) for g in extra):
-        extra.insert(0, neb)
     if extra:
         sections.append({"key": "TODAY", "title": "Your teams", "games": extra})
     return {"mode": "slate", "sections": sections}

@@ -4,6 +4,8 @@
 @font-face { font-family: "Inter"; font-weight: 500; font-style: normal; font-display: swap; src: url("fonts/Inter-Medium.woff") format("woff"); }
 @font-face { font-family: "Inter"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/Inter-SemiBold.woff") format("woff"); }
 @font-face { font-family: "Inter"; font-weight: 700; font-style: normal; font-display: swap; src: url("fonts/Inter-Bold.woff") format("woff"); }
+/* Clock only: TeX Gyre Adventor (GUST Font License), subset to digits, colon, AM/PM. */
+@font-face { font-family: "Adventor"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/TeXGyreAdventor-Regular.woff") format("woff"); }
 
 html { font-size: 1.6vw; }
 body {
@@ -18,8 +20,8 @@ body {
 .wrap { height: 100vh; box-sizing: border-box; padding: 2.5vh 3vw; display: flex; flex-direction: column; }
 
 .top { display: flex; justify-content: space-between; align-items: flex-start; }
-#clock { font-size: 6.4rem; font-weight: 300; line-height: .95; letter-spacing: -.02em; }
-#clock span { font-weight: 500; letter-spacing: .04em; }
+#clock { font-family: "Adventor", "Inter", Roboto, Arial, sans-serif; font-size: 6.4rem; font-weight: 400; line-height: .95; letter-spacing: -.01em; }
+#clock span { font-weight: 400; letter-spacing: .04em; }
 #date { margin-top: .7rem; }
 #date .wd { display: block; font-size: .95rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: #7d8fa3; }
 #date .md { display: block; font-size: 1.7rem; font-weight: 400; color: #cfd9e4; margin-top: .15rem; }
