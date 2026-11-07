@@ -26,6 +26,39 @@ function checkStale() {
   $("stale").innerHTML = ageMin > 120 ? "Data is " + Math.round(ageMin / 60) + "h old" : "";
 }
 
+var LG_COLORS = { NFL: "#4aa3ff", NCAA: "#ff7a59", NHL: "#7bd88f", MLB: "#f2c14e", TODAY: "#c9a0ff" };
+
+function teamHtml(s) {
+  var rk = s.rank ? "<i class='rk'>" + s.rank + "</i>" : "";
+  return "<span class='tm" + (s.fav ? " fv" : "") + "'>" + rk + esc(s.abbr) + "</span>";
+}
+
+function gameHtml(g) {
+  var a = g.away, h = g.home, mid;
+  if (a.score !== null && a.score !== undefined && h.score !== null && h.score !== undefined) {
+    mid = "<span class='sc" + (a.win ? " w" : "") + "'>" + esc(a.score) + "</span>" +
+          "<span class='dash'>&ndash;</span>" +
+          "<span class='sc" + (h.win ? " w" : "") + "'>" + esc(h.score) + "</span>";
+  } else {
+    mid = "<span class='dash'>@</span>";
+  }
+  var color = g.live ? "#ff5252" : (g.fav ? (LG_COLORS[g.league] || "#9fb0c3") : "#2b3a4d");
+  return "<div class='g'><div class='gi" + (g.live ? " live" : "") + "' style='border-left-color:" + color + "'>" +
+    "<div class='gm'>" + teamHtml(a) + mid + teamHtml(h) + "</div>" +
+    "<div class='gs'>" + esc(g.status) + "</div></div></div>";
+}
+
+function renderSlate(sections) {
+  var out = "<div class='slate'>";
+  for (var i = 0; i < sections.length; i++) {
+    var sec = sections[i];
+    out += "<div class='lgh' style='color:" + (LG_COLORS[sec.key] || "#9fb0c3") + "'>" + esc(sec.title) + "</div><div class='games'>";
+    for (var j = 0; j < sec.games.length; j++) { out += gameHtml(sec.games[j]); }
+    out += "</div>";
+  }
+  return out + "</div>";
+}
+
 function render() {
   if (!DATA) { return; }
   var w = DATA.weather;
@@ -51,7 +84,9 @@ function render() {
       if ($("wdesc")) { $("wdesc").innerHTML = "Weather unavailable"; }
     }
   }
-  if ($("scores")) {
+  if ($("scores") && DATA.view && DATA.view.mode === "slate") {
+    $("scores").innerHTML = renderSlate(DATA.view.sections);
+  } else if ($("scores")) {
     // Group teams by league, keeping the order they first appear in.
     var order = [], groups = {};
     for (var j = 0; j < DATA.teams.length; j++) {

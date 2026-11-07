@@ -239,7 +239,11 @@ def summarize(events, now):
         sub = "Final, " + e["when"].strftime("%a %-m/%-d")
     if nxt:
         n = nxt[0]
-        t = "Next: " + n["when"].strftime("%a %-m/%-d %-I:%M %p") + " " + vs(n)
+        if n["when"].date() == now.date():
+            when_txt = "Today " + n["when"].strftime("%-I:%M %p")
+        else:
+            when_txt = n["when"].strftime("%a %-m/%-d %-I:%M %p")
+        t = "Next: " + when_txt + " " + vs(n)
         sub = (sub + "  |  " if sub else "") + t
     if done and not nxt and (now - done[-1]["when"]).days > 30:
         sub += "  |  Offseason"
@@ -265,6 +269,123 @@ def build_teams(now):
     return out
 
 
+# ---------- day-aware scoreboard ----------
+
+FAV_ABBR = {"NFL": {"GB", "KC", "HOU"}, "NCAA": {"NEB"}, "NHL": {"ANA"}, "MLB": {"LAA"}}
+LEAGUE_PATHS = {
+    "NFL": "football/nfl",
+    "NCAA": "football/college-football",
+    "NHL": "hockey/nhl",
+    "MLB": "baseball/mlb",
+}
+TODAY_LEAGUES = ("NFL", "NCAA", "NHL", "MLB")
+
+
+def fetch_scoreboard(league, now):
+    url = (
+        f"https://site.api.espn.com/apis/site/v2/sports/{LEAGUE_PATHS[league]}"
+        f"/scoreboard?dates={now.strftime('%Y%m%d')}"
+    )
+    if league == "NCAA":
+        url += "&groups=80&limit=200"  # FBS only
+    return get_json(url)
+
+
+def parse_game(ev, league):
+    comp = ev["competitions"][0]
+    st = (comp.get("status") or ev.get("status") or {}).get("type", {})
+    state = st.get("state", "pre")
+    when = datetime.fromisoformat((comp.get("date") or ev["date"]).replace("Z", "+00:00"))
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    when = when.astimezone(TZ)
+    sides = {}
+    for c in comp["competitors"]:
+        t = c.get("team", {})
+        abbr = t.get("abbreviation") or t.get("shortDisplayName", "?")
+        rank = (c.get("curatedRank") or {}).get("current")
+        rank = rank if isinstance(rank, int) and 1 <= rank <= 25 else None
+        fav = abbr in FAV_ABBR[league] or (league == "NCAA" and str(t.get("id")) == "158")
+        sides[c.get("homeAway")] = {
+            "abbr": abbr,
+            "score": score_of(c) if state != "pre" else None,
+            "rank": rank,
+            "fav": fav,
+            "win": bool(c.get("winner")),
+        }
+    away, home = sides["away"], sides["home"]
+    if state == "pre":
+        status = when.strftime("%-I:%M %p")
+    else:
+        status = st.get("shortDetail") or st.get("description") or ""
+    return {
+        "league": league,
+        "away": away,
+        "home": home,
+        "status": status,
+        "state": state,
+        "live": state == "in",
+        "fav": away["fav"] or home["fav"],
+        "when": when.timestamp(),
+    }
+
+
+def games_for(league, now):
+    out = []
+    for ev in fetch_scoreboard(league, now).get("events", []):
+        try:
+            out.append(parse_game(ev, league))
+        except (KeyError, IndexError, ValueError, TypeError):
+            continue
+    return out
+
+
+def build_view(now):
+    """Saturday: Nebraska + Top 25 matchups. Sunday: full NFL slate.
+    Any day: favorite teams that play today. Otherwise 'favorites' mode."""
+    dow = now.weekday()  # Mon=0 ... Sat=5, Sun=6
+    sections, used = [], set()
+
+    if dow == 5:
+        games = games_for("NCAA", now)
+        feats = [g for g in games if g["fav"]]
+        top = [g for g in games if not g["fav"] and g["away"]["rank"] and g["home"]["rank"]]
+        top.sort(key=lambda g: (min(g["away"]["rank"], g["home"]["rank"]), g["when"]))
+        picked = (feats + top)[:10]
+        if picked:
+            sections.append({"key": "NCAA", "title": "College Football · Top 25", "games": picked})
+            used.add("NCAA")
+    elif dow == 6:
+        games = games_for("NFL", now)
+        games.sort(key=lambda g: (not g["fav"], g["when"]))
+        if games:
+            sections.append({"key": "NFL", "title": "NFL", "games": games[:16]})
+            used.add("NFL")
+
+    if not sections:
+        return {"mode": "favorites", "sections": []}
+
+    extra = []
+    for lg in TODAY_LEAGUES:
+        if lg in used:
+            continue
+        try:
+            extra += [g for g in games_for(lg, now) if g["fav"]]
+        except Exception:
+            continue
+    if extra:
+        extra.sort(key=lambda g: g["when"])
+        sections.append({"key": "TODAY", "title": "Your teams today", "games": extra})
+    return {"mode": "slate", "sections": sections}
+
+
+def safe_view(now):
+    try:
+        return build_view(now)
+    except Exception:
+        return {"mode": "favorites", "sections": []}
+
+
 def read_notes():
     try:
         with open("notes.txt", encoding="utf-8") as f:
@@ -284,6 +405,7 @@ def main():
         "updated_epoch": int(now.timestamp()),
         "weather": weather,
         "teams": build_teams(now),
+        "view": safe_view(now),
         "notes": read_notes(),
     }
     os.makedirs("site", exist_ok=True)
