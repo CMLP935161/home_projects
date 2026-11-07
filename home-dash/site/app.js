@@ -15,7 +15,7 @@ function tick() {
   if ($("date")) {
     var days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
     var mons = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-    $("date").innerHTML = days[d.getDay()] + ", " + mons[d.getMonth()] + " " + d.getDate();
+    $("date").innerHTML = "<span class='wd'>" + days[d.getDay()] + "</span><span class='md'>" + mons[d.getMonth()] + " " + d.getDate() + "</span>";
   }
   checkStale();
 }
