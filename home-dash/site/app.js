@@ -52,15 +52,30 @@ function render() {
     }
   }
   if ($("scores")) {
-    var s = "";
+    // Group teams by league, keeping the order they first appear in.
+    var order = [], groups = {};
     for (var j = 0; j < DATA.teams.length; j++) {
       var t = DATA.teams[j];
-      s += "<div class='card" + (t.live ? " live" : "") + "'><div class='in'>" +
-        "<div class='row'><span class='name'>" + esc(t.name) + "<span class='lg'>" + esc(t.league) + "</span></span>" +
-        "<span class='head'>" + esc(t.head) + "</span></div>" +
-        "<div class='sub'>" + esc(t.sub) + "</div></div></div>";
+      if (!groups[t.league]) { groups[t.league] = []; order.push(t.league); }
+      groups[t.league].push(t);
     }
-    $("scores").innerHTML = s;
+    var titles = { NFL: "NFL", NCAA: "College Football", NHL: "NHL", MLB: "MLB" };
+    var colors = { NFL: "#4aa3ff", NCAA: "#ff7a59", NHL: "#7bd88f", MLB: "#f2c14e" };
+    // First league fills the left column; the rest stack in the right column.
+    var cols = ["", ""];
+    for (var g = 0; g < order.length; g++) {
+      var lg = order[g], col = g === 0 ? 0 : 1;
+      var c = colors[lg] || "#9fb0c3";
+      cols[col] += "<div class='lgh' style='color:" + c + "'>" + esc(titles[lg] || lg) + "</div>";
+      for (var k = 0; k < groups[lg].length; k++) {
+        var tm = groups[lg][k];
+        cols[col] += "<div class='card" + (tm.live ? " live" : "") + "'><div class='in' style='border-left-color:" + c + "'>" +
+          "<div class='row'><span class='name'>" + esc(tm.name) + "</span>" +
+          "<span class='head'>" + esc(tm.head) + "</span></div>" +
+          "<div class='sub'>" + esc(tm.sub) + "</div></div></div>";
+      }
+    }
+    $("scores").innerHTML = "<div class='col'>" + cols[0] + "</div><div class='col'>" + cols[1] + "</div>";
   }
   if ($("notes")) {
     var n = "";
