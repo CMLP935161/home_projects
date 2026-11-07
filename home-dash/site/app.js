@@ -32,12 +32,17 @@ function render() {
   if ($("temp")) {
     if (w) {
       $("temp").innerHTML = w.icon + " " + w.temp + "&deg;";
-      if ($("wdesc")) { $("wdesc").innerHTML = esc(w.desc) + " &middot; H " + w.hi + "&deg; L " + w.lo + "&deg;"; }
+      if ($("wdesc")) {
+        var hl = (w.hi !== null && w.lo !== null) ? " &middot; H " + w.hi + "&deg; L " + w.lo + "&deg;" : "";
+        $("wdesc").innerHTML = esc(w.desc || "") + hl;
+      }
       if ($("days")) {
         var h = "";
         for (var i = 0; i < w.days.length; i++) {
           var x = w.days[i];
-          h += "<div class='day'><b>" + x.day + "</b>" + x.icon + " " + x.hi + "&deg;/" + x.lo + "&deg;</div>";
+          var hi = x.hi !== null ? x.hi + "&deg;" : "--";
+          var lo = x.lo !== null ? x.lo + "&deg;" : "--";
+          h += "<div class='day'><b>" + x.day + "</b>" + x.icon + " " + hi + "/" + lo + "</div>";
         }
         $("days").innerHTML = h;
       }

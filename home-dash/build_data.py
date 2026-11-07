@@ -34,12 +34,16 @@ WEATHER = {
 
 
 def get_json(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "home-dash"})
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "home-dash (github.com/CMLP935161/home_projects)",
+                 "Accept": "application/geo+json, application/json"},
+    )
     with urllib.request.urlopen(req, timeout=20) as r:
         return json.load(r)
 
 
-def build_weather():
+def build_weather_openmeteo():
     w = get_json(
         "https://api.open-meteo.com/v1/forecast"
         f"?latitude={LAT}&longitude={LON}"
@@ -70,12 +74,95 @@ def build_weather():
     }
 
 
+def icon_for(text):
+    t = (text or "").lower()
+    if "thunder" in t:
+        return "⛈️"
+    if "rain" in t or "shower" in t or "drizzle" in t:
+        return "\U0001F327️"
+    if "snow" in t:
+        return "❄️"
+    if "fog" in t or "haze" in t or "smoke" in t:
+        return "\U0001F32B️"
+    if "partly" in t:
+        return "⛅"
+    if "mostly sunny" in t or "mostly clear" in t:
+        return "\U0001F324️"
+    if "cloud" in t or "overcast" in t:
+        return "☁️"
+    if "sunny" in t or "clear" in t:
+        return "☀️"
+    return ""
+
+
+def build_weather_nws(now):
+    """National Weather Service: real station observations + official forecast."""
+    pts = get_json(f"https://api.weather.gov/points/{LAT:.4f},{LON:.4f}")["properties"]
+
+    # Current conditions: first nearby station that reports a temperature.
+    temp = desc = None
+    stations = get_json(pts["observationStations"])["features"][:5]
+    for st in stations:
+        sid = st["properties"]["stationIdentifier"]
+        try:
+            obs = get_json(f"https://api.weather.gov/stations/{sid}/observations/latest")["properties"]
+        except Exception:
+            continue
+        c = (obs.get("temperature") or {}).get("value")
+        if c is not None:
+            temp = round(c * 9 / 5 + 32)
+            desc = obs.get("textDescription") or ""
+            break
+    if temp is None:
+        raise ValueError("no NWS station reported a temperature")
+
+    # Forecast periods -> one entry per calendar day.
+    periods = get_json(pts["forecast"])["properties"]["periods"]
+    by_day = {}
+    for p in periods:
+        day = p["startTime"][:10]
+        e = by_day.setdefault(day, {"hi": None, "lo": None, "text": ""})
+        if p.get("isDaytime"):
+            e["hi"] = p["temperature"]
+            e["text"] = p.get("shortForecast", "")
+        else:
+            e["lo"] = p["temperature"]
+            if not e["text"]:
+                e["text"] = p.get("shortForecast", "")
+    keys = sorted(by_day)
+    today_key = now.strftime("%Y-%m-%d")
+    today = by_day.get(today_key, {"hi": None, "lo": None, "text": ""})
+    days = []
+    for k in [k for k in keys if k > today_key][:3]:
+        e = by_day[k]
+        days.append({
+            "day": datetime.fromisoformat(k).strftime("%a"),
+            "hi": e["hi"], "lo": e["lo"], "icon": icon_for(e["text"]),
+        })
+    return {
+        "temp": temp,
+        "desc": desc,
+        "icon": icon_for(desc),
+        "hi": today["hi"],
+        "lo": today["lo"],
+        "days": days,
+    }
+
+
+def build_weather(now):
+    try:
+        return build_weather_nws(now)
+    except Exception:
+        return build_weather_openmeteo()
+
+
 # ---------- sports ----------
 
-def fetch_schedule(path, team):
-    return get_json(
-        f"https://site.api.espn.com/apis/site/v2/sports/{path}/teams/{team}/schedule"
-    )
+def fetch_schedule(path, team, season=None):
+    url = f"https://site.api.espn.com/apis/site/v2/sports/{path}/teams/{team}/schedule"
+    if season:
+        url += f"?season={season}"
+    return get_json(url)
 
 
 def score_of(c):
@@ -154,6 +241,8 @@ def summarize(events, now):
         n = nxt[0]
         t = "Next: " + n["when"].strftime("%a %-m/%-d %-I:%M %p") + " " + vs(n)
         sub = (sub + "  |  " if sub else "") + t
+    if done and not nxt and (now - done[-1]["when"]).days > 30:
+        sub += "  |  Offseason"
     if not head and not nxt:
         head = "No games"
     return head, sub, False
@@ -163,7 +252,13 @@ def build_teams(now):
     out = []
     for name, league, path, team in TEAMS:
         try:
-            head, sub, live = summarize(parse_events(fetch_schedule(path, team)), now)
+            events = parse_events(fetch_schedule(path, team))
+            if not events:  # offseason: the feed may default to an empty new season
+                for yr in (now.year, now.year - 1):
+                    events = parse_events(fetch_schedule(path, team, yr))
+                    if events:
+                        break
+            head, sub, live = summarize(events, now)
         except Exception:
             head, sub, live = "Unavailable", "", False
         out.append({"name": name, "league": league, "head": head, "sub": sub, "live": live})
@@ -181,7 +276,7 @@ def read_notes():
 def main():
     now = datetime.now(TZ)
     try:
-        weather = build_weather()
+        weather = build_weather(now)
     except Exception:
         weather = None
     data = {
