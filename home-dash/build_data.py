@@ -462,7 +462,8 @@ def safe_view(now):
 def read_notes():
     try:
         with open("notes.txt", encoding="utf-8") as f:
-            return [ln.strip() for ln in f if ln.strip()][:5]
+            # blank lines and lines starting with # are ignored
+            return [ln.strip() for ln in f if ln.strip() and not ln.strip().startswith("#")][:5]
     except FileNotFoundError:
         return []
 

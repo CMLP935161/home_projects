@@ -255,6 +255,7 @@ function render() {
     var n = "";
     for (var k = 0; k < DATA.notes.length; k++) { n += "<div>" + esc(DATA.notes[k]) + "</div>"; }
     $("notes").innerHTML = n;
+    $("notes").style.display = n ? "" : "none";  // hide the whole frame when there's no text
   }
   if ($("updated")) { $("updated").innerHTML = "Updated " + esc(DATA.updated); }
   checkStale();

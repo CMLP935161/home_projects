@@ -1,2 +1,3 @@
-Edit notes.txt in your repo to change this text
-Up to 5 short lines
+# Notes shown at the bottom of the dashboard (public site, so nothing private).
+# Lines starting with # are ignored. Add up to 5 short plain lines below.
+# If there are no plain lines, the notes panel is hidden.
