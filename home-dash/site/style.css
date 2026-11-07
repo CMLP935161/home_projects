@@ -10,7 +10,9 @@
 html { font-size: 1.6vw; }
 body {
   margin: 0; height: 100vh; overflow: hidden;
-  background: #0b0f14; color: #e8eef5;
+  color: #e8eef5;
+  /* Dark overlay keeps text readable; swap the file name to change the picture. */
+  background: linear-gradient(rgba(11, 15, 20, .52), rgba(11, 15, 20, .74)), url("bg-sunset.jpg") center / cover no-repeat #0b0f14;
   font-family: "Inter", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 400;
   -webkit-font-feature-settings: "tnum" 1, "kern" 1;
