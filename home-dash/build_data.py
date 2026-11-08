@@ -477,7 +477,11 @@ def parse_game(ev, league):
         # long form includes the ball position, e.g. "1st & 10 at KC 38"
         down = sit.get("downDistanceText") or sit.get("shortDownDistanceText") or None
         redzone = bool(sit.get("isRedZone"))
+    spread = None
+    if league in ("NFL", "NCAA"):
+        spread = ((comp.get("odds") or [{}])[0].get("details") or None)
     return {
+        "spread": spread,
         "poss": poss,
         "down": down,
         "redzone": redzone,
@@ -666,6 +670,28 @@ def safe_view(now):
         return {"mode": "favorites", "sections": []}
 
 
+def carry_spreads(view, now):
+    """ESPN can drop the line once a game starts. Keep the last line we saw today
+    by reading the previously published data.json (same day, same matchup)."""
+    games = [g for sec in (view or {}).get("sections", []) for g in sec.get("games", [])]
+    if not any(g.get("league") in ("NFL", "NCAA") and not g.get("spread") for g in games):
+        return
+    try:
+        prev = get_json("https://cmlp935161.github.io/home_projects/data.json")
+    except Exception:
+        return
+    if prev.get("day") != now.strftime("%Y-%m-%d"):
+        return
+    old = {}
+    for sec in (prev.get("view") or {}).get("sections", []):
+        for g in sec.get("games", []):
+            if g.get("spread"):
+                old[(g["league"], g["away"]["abbr"], g["home"]["abbr"])] = g["spread"]
+    for g in games:
+        if not g.get("spread"):
+            g["spread"] = old.get((g["league"], g["away"]["abbr"], g["home"]["abbr"]))
+
+
 def read_notes():
     try:
         with open("notes.txt", encoding="utf-8") as f:
@@ -681,13 +707,19 @@ def main():
         weather = build_weather(now)
     except Exception:
         weather = None
+    view = safe_view(now)
+    try:
+        carry_spreads(view, now)
+    except Exception:
+        pass
     data = {
+        "day": now.strftime("%Y-%m-%d"),
         "updated": now.strftime("%-I:%M %p"),
         "updated_epoch": int(now.timestamp()),
         "weather": weather,
         "extras": build_extras(now, weather),
         "teams": build_teams(now),
-        "view": safe_view(now),
+        "view": view,
         "notes": read_notes(),
     }
     os.makedirs("site", exist_ok=True)
