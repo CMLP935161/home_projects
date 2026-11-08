@@ -96,7 +96,7 @@ body {
 .gi.live .gs { color: #ff8a8a; font-weight: 600; }
 .gi.redz { background: #2a1518; }
 .rz { display: inline-block; background: #ff5252; color: #1a0a0c; font-size: .68rem; font-weight: 800; letter-spacing: .08em; padding: .08rem .4rem; border-radius: .25rem; margin-right: .35rem; }
-.dn { font-size: .74rem; font-weight: 500; color: #cfd9e4; margin-top: .1rem; }
+.dn { font-size: .78rem; font-weight: 500; color: #cfd9e4; margin-right: .6rem; }
 .ball { font-size: .8rem; margin-left: .25rem; }
 .flash { display: inline-block; background: #ffd54f; color: #231a00; font-size: .7rem; font-weight: 800; letter-spacing: .06em; padding: .05rem .4rem; border-radius: .25rem; margin-left: .4rem; vertical-align: .1em; -webkit-animation: blink 1s ease-in-out infinite; animation: blink 1s ease-in-out infinite; }
 @-webkit-keyframes blink { 50% { opacity: .35; } }
@@ -146,3 +146,17 @@ body {
 .main #temp { font-size: 4rem; }
 .main #wdesc { font-size: 1.1rem; margin-top: .25rem; }
 .main .days { margin-top: .4rem; }
+
+/* Fire 7 (1024x600): a bit less vertical room than the HD 8, so trim further */
+@media (max-width: 1100px) {
+  .main #clock { font-size: 4.6rem; }
+  .main #date .md { font-size: 1.3rem; }
+  .main #date .wd { font-size: .85rem; }
+  .main #temp { font-size: 3.5rem; }
+  .main .name, .main .head { font-size: 1.2rem; }
+  .main .gi { padding: .06rem .8rem; }
+  .main .g { padding: .06rem .3rem; }
+  .main .notes { font-size: 1rem; padding-top: .4rem; }
+  .main #updated { font-size: .75rem; margin-top: .15rem; }
+  .main .wrap { padding: 2vh 3vw; }
+}

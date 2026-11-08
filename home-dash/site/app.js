@@ -197,10 +197,10 @@ function gameHtml(g) {
   var fl = activeFlash(g.league + a.abbr + "@" + h.abbr);
   var st = esc(g.status);
   if (g.redzone) { st = "<span class='rz'>RED ZONE</span> " + st; }
-  var dn = g.down ? "<div class='dn'>" + esc(g.down) + "</div>" : "";
+  var dn = g.down ? "<span class='dn'>" + esc(g.down) + "</span>" : "";
   return "<div class='g'><div class='gi" + (g.live ? " live" : "") + (g.redzone ? " redz" : "") + "' style='border-left-color:" + color + "'>" +
     "<div class='gm'>" + teamHtml(a, fl, g.poss) + mid + teamHtml(h, fl, g.poss) + "</div>" +
-    "<div class='gs'>" + st + dn + "</div></div></div>";
+    "<div class='gs'>" + dn + st + "</div></div></div>";
 }
 
 function cardHtml(c) {
