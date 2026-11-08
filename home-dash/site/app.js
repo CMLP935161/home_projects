@@ -7,6 +7,7 @@ function esc(s) {
 }
 
 function tick() {
+  renderHourly();
   var d = new Date();
   var h = d.getHours(), m = d.getMinutes();
   var ap = h >= 12 ? "PM" : "AM";
@@ -231,8 +232,46 @@ function renderSlate(sections) {
   return out + "</div>";
 }
 
+function hourLabel(t) {
+  var d = new Date(t * 1000), hr = d.getHours(), ap = hr >= 12 ? "PM" : "AM";
+  return (hr % 12 === 0 ? 12 : hr % 12) + " " + ap;
+}
+
+/* Next 3 hours from the stored list; re-run every tick so it rolls forward on its own */
+function renderHourly() {
+  var el = $("hourly");
+  if (!el || !DATA || !DATA.weather || !DATA.weather.hourly) { return; }
+  var now = new Date().getTime() / 1000, hrs = DATA.weather.hourly, out = "", n = 0;
+  for (var i = 0; i < hrs.length && n < 3; i++) {
+    var x = hrs[i];
+    if (x.t <= now) { continue; }
+    var pop = (x.pop !== null && x.pop !== undefined && x.pop >= 20) ? "<span class='pop'>" + x.pop + "%</span>" : "";
+    out += "<div class='day'><b>" + hourLabel(x.t) + "</b>" + x.icon + " " + x.temp + "&deg;" + pop + "</div>";
+    n++;
+  }
+  if (el.getAttribute("data-k") !== out) { el.innerHTML = out; el.setAttribute("data-k", out); }
+}
+
+function renderForecast() {
+  var el = $("forecast");
+  if (!el) { return; }
+  var dl = (DATA && DATA.weather && DATA.weather.daily) || [];
+  if (!dl.length) { el.style.display = "none"; return; }
+  var out = "";
+  for (var i = 0; i < dl.length; i++) {
+    var x = dl[i];
+    var hi = x.hi !== null ? x.hi + "&deg;" : "--", lo = x.lo !== null ? x.lo + "&deg;" : "--";
+    var pop = (x.pop !== null && x.pop !== undefined && x.pop >= 20) ? " <span class='pp'>" + x.pop + "%</span>" : "";
+    out += "<div class='fd'><b>" + esc(x.day) + "</b><span class='fi'>" + x.icon + pop + "</span><span class='fh'>" + hi + "</span><span class='fl'>" + lo + "</span></div>";
+  }
+  el.innerHTML = out;
+  el.style.display = "";
+}
+
 function render() {
   if (!DATA) { return; }
+  renderHourly();
+  renderForecast();
   var w = DATA.weather;
   if ($("temp")) {
     if (w) {

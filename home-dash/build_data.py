@@ -143,6 +143,8 @@ def build_weather_nws(now):
             "hi": e["hi"], "lo": e["lo"], "icon": icon_for(e["text"]),
         })
     return {
+        "_hourly_url": pts.get("forecastHourly"),
+        "_nws_days": by_day,
         "temp": temp,
         "humidity": humidity,
         "desc": desc,
@@ -153,11 +155,95 @@ def build_weather_nws(now):
     }
 
 
+def night_icon(icon, is_day):
+    return "\U0001F319" if (not is_day and icon in ("☀️", "\U0001F324️")) else icon
+
+
+def om_supplement(now):
+    """Open-Meteo: 10 daily entries + next ~24 hourly entries (used to fill gaps / as fallback)."""
+    w = get_json(
+        "https://api.open-meteo.com/v1/forecast"
+        f"?latitude={LAT}&longitude={LON}"
+        "&hourly=temperature_2m,weather_code,precipitation_probability,is_day"
+        "&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max"
+        "&temperature_unit=fahrenheit&timezone=America%2FLos_Angeles&forecast_days=10"
+    )
+    d, h = w["daily"], w["hourly"]
+    daily = {}
+    for i, k in enumerate(d["time"]):
+        _, ic = WEATHER.get(d["weather_code"][i], ("", ""))
+        daily[k] = {"hi": round(d["temperature_2m_max"][i]), "lo": round(d["temperature_2m_min"][i]),
+                    "icon": ic, "pop": d["precipitation_probability_max"][i]}
+    hourly = []
+    for i, k in enumerate(h["time"]):
+        t = datetime.fromisoformat(k).replace(tzinfo=TZ)
+        if t <= now:
+            continue
+        _, ic = WEATHER.get(h["weather_code"][i], ("", ""))
+        hourly.append({"t": int(t.timestamp()), "temp": round(h["temperature_2m"][i]),
+                       "icon": night_icon(ic, bool(h["is_day"][i])),
+                       "pop": h["precipitation_probability"][i]})
+        if len(hourly) >= 12:
+            break
+    return daily, hourly
+
+
+def nws_hourly(url, now):
+    out = []
+    for p in get_json(url)["properties"]["periods"]:
+        t = datetime.fromisoformat(p["startTime"])
+        if t <= now:
+            continue
+        out.append({"t": int(t.timestamp()), "temp": p["temperature"],
+                    "icon": night_icon(icon_for(p.get("shortForecast", "")), p.get("isDaytime", True)),
+                    "pop": (p.get("probabilityOfPrecipitation") or {}).get("value")})
+        if len(out) >= 12:
+            break
+    return out
+
+
+def build_forecasts(weather, now):
+    """Adds weather['hourly'] (next 12 h) and weather['daily'] (today + 9 days)."""
+    nws_days = weather.pop("_nws_days", {})
+    hourly_url = weather.pop("_hourly_url", None)
+    try:
+        om_daily, om_hourly = om_supplement(now)
+    except Exception:
+        om_daily, om_hourly = {}, []
+    hourly = []
+    if hourly_url:
+        try:
+            hourly = nws_hourly(hourly_url, now)
+        except Exception:
+            hourly = []
+    weather["hourly"] = hourly or om_hourly
+
+    daily = []
+    for i in range(10):
+        day = now + timedelta(days=i)
+        k = day.strftime("%Y-%m-%d")
+        n, o = nws_days.get(k, {}), om_daily.get(k, {})
+        hi = n.get("hi") if n.get("hi") is not None else o.get("hi")
+        lo = n.get("lo") if n.get("lo") is not None else o.get("lo")
+        icon = icon_for(n.get("text", "")) or o.get("icon", "")
+        if hi is None and lo is None:
+            continue
+        daily.append({"day": "Today" if i == 0 else day.strftime("%a"), "hi": hi, "lo": lo,
+                      "icon": icon, "pop": o.get("pop")})
+    weather["daily"] = daily
+    return weather
+
+
 def build_weather(now):
     try:
-        return build_weather_nws(now)
+        w = build_weather_nws(now)
     except Exception:
-        return build_weather_openmeteo()
+        w = build_weather_openmeteo()
+    try:
+        return build_forecasts(w, now)
+    except Exception:
+        w.pop("_nws_days", None); w.pop("_hourly_url", None)
+        return w
 
 
 def sun_times(now):
