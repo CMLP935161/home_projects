@@ -256,6 +256,23 @@ function render() {
       if ($("wdesc")) { $("wdesc").innerHTML = "Weather unavailable"; }
     }
   }
+  if ($("extras")) {
+    var ex = DATA.extras || {}, eh = "";
+    if (ex.sun) {
+      eh += "<div class='ex'><span class='exl'>Sun</span><span class='exv'><i class='up'>&#9650;</i> " + esc(ex.sun.rise) +
+            "</span><span class='exv'><i class='dn2'>&#9660;</i> " + esc(ex.sun.set) + "</span></div>";
+    }
+    if (ex.aqi) {
+      var a = ex.aqi.aqi, ac = a <= 50 ? "#7bd88f" : a <= 100 ? "#f2c14e" : a <= 150 ? "#ff9f43" : "#ff6b6b";
+      eh += "<div class='ex'><span class='exl'>Air quality</span><span class='exv'><i class='dot' style='background:" + ac +
+            "'></i> " + a + "</span><span class='exs'>" + esc(ex.aqi.label) + "</span></div>";
+    }
+    if (ex.humidity !== null && ex.humidity !== undefined) {
+      eh += "<div class='ex'><span class='exl'>Humidity</span><span class='exv'>" + ex.humidity + "%</span></div>";
+    }
+    $("extras").innerHTML = eh;
+    $("extras").style.display = eh ? "" : "none";
+  }
   if ($("scores") && DATA.view && DATA.view.mode === "slate") {
     $("scores").innerHTML = renderSlate(DATA.view.sections);
   } else if ($("scores")) {

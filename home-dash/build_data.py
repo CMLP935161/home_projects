@@ -47,7 +47,7 @@ def build_weather_openmeteo():
     w = get_json(
         "https://api.open-meteo.com/v1/forecast"
         f"?latitude={LAT}&longitude={LON}"
-        "&current=temperature_2m,weather_code"
+        "&current=temperature_2m,weather_code,relative_humidity_2m"
         "&daily=temperature_2m_max,temperature_2m_min,weather_code"
         "&temperature_unit=fahrenheit&timezone=America%2FLos_Angeles"
         "&forecast_days=4"
@@ -66,6 +66,7 @@ def build_weather_openmeteo():
         })
     return {
         "temp": round(cur["temperature_2m"]),
+        "humidity": round(cur["relative_humidity_2m"]) if cur.get("relative_humidity_2m") is not None else None,
         "desc": desc,
         "icon": icon,
         "hi": round(d["temperature_2m_max"][0]),
@@ -100,7 +101,7 @@ def build_weather_nws(now):
     pts = get_json(f"https://api.weather.gov/points/{LAT:.4f},{LON:.4f}")["properties"]
 
     # Current conditions: first nearby station that reports a temperature.
-    temp = desc = None
+    temp = desc = humidity = None
     stations = get_json(pts["observationStations"])["features"][:5]
     for st in stations:
         sid = st["properties"]["stationIdentifier"]
@@ -112,6 +113,8 @@ def build_weather_nws(now):
         if c is not None:
             temp = round(c * 9 / 5 + 32)
             desc = obs.get("textDescription") or ""
+            rh = (obs.get("relativeHumidity") or {}).get("value")
+            humidity = round(rh) if rh is not None else None
             break
     if temp is None:
         raise ValueError("no NWS station reported a temperature")
@@ -141,6 +144,7 @@ def build_weather_nws(now):
         })
     return {
         "temp": temp,
+        "humidity": humidity,
         "desc": desc,
         "icon": icon_for(desc),
         "hi": today["hi"],
@@ -154,6 +158,64 @@ def build_weather(now):
         return build_weather_nws(now)
     except Exception:
         return build_weather_openmeteo()
+
+
+def sun_times(now):
+    """Sunrise/sunset for LAT/LON on now's date (NOAA algorithm; no network needed)."""
+    import math
+    n = now.timetuple().tm_yday
+    gamma = 2 * math.pi / 365 * (n - 1)
+    eqtime = 229.18 * (0.000075 + 0.001868 * math.cos(gamma) - 0.032077 * math.sin(gamma)
+                       - 0.014615 * math.cos(2 * gamma) - 0.040849 * math.sin(2 * gamma))
+    decl = (0.006918 - 0.399912 * math.cos(gamma) + 0.070257 * math.sin(gamma)
+            - 0.006758 * math.cos(2 * gamma) + 0.000907 * math.sin(2 * gamma)
+            - 0.002697 * math.cos(3 * gamma) + 0.00148 * math.sin(3 * gamma))
+    lat = math.radians(LAT)
+    cos_ha = (math.cos(math.radians(90.833)) / (math.cos(lat) * math.cos(decl))
+              - math.tan(lat) * math.tan(decl))
+    if cos_ha > 1 or cos_ha < -1:
+        return None
+    ha = math.degrees(math.acos(cos_ha))
+    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    utc_off = now.utcoffset().total_seconds() / 60
+    out = []
+    for sign in (1, -1):  # sunrise, sunset
+        minutes_utc = 720 - 4 * (LON + sign * ha) - eqtime
+        t = midnight + timedelta(minutes=minutes_utc + utc_off)
+        out.append(t.strftime("%-I:%M %p"))
+    return {"rise": out[0], "set": out[1]}
+
+
+def aqi_category(v):
+    for top, label in ((50, "Good"), (100, "Moderate"), (150, "Unhealthy for sensitive groups"),
+                       (200, "Unhealthy"), (300, "Very unhealthy")):
+        if v <= top:
+            return label
+    return "Hazardous"
+
+
+def build_air_quality():
+    """US AQI from Open-Meteo's air-quality model (free, no key)."""
+    d = get_json("https://air-quality-api.open-meteo.com/v1/air-quality"
+                 f"?latitude={LAT}&longitude={LON}&current=us_aqi&timezone=America%2FLos_Angeles")
+    v = d["current"]["us_aqi"]
+    if v is None:
+        return None
+    v = round(v)
+    return {"aqi": v, "label": aqi_category(v)}
+
+
+def build_extras(now, weather):
+    ex = {"sun": None, "aqi": None, "humidity": (weather or {}).get("humidity")}
+    try:
+        ex["sun"] = sun_times(now)
+    except Exception:
+        pass
+    try:
+        ex["aqi"] = build_air_quality()
+    except Exception:
+        pass
+    return ex
 
 
 # ---------- sports ----------
@@ -537,6 +599,7 @@ def main():
         "updated": now.strftime("%-I:%M %p"),
         "updated_epoch": int(now.timestamp()),
         "weather": weather,
+        "extras": build_extras(now, weather),
         "teams": build_teams(now),
         "view": safe_view(now),
         "notes": read_notes(),

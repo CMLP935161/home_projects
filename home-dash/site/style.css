@@ -33,6 +33,16 @@ body {
 .small #date .md { font-size: 1.25rem; }
 
 .weather { text-align: right; }
+.top > div:first-child { flex-shrink: 0; }
+.extras { display: flex; flex: 1; justify-content: center; margin: .4rem .8rem 0; min-width: 0; }
+.ex { margin: 0 .35rem; padding: .45rem .6rem; background: rgba(20,27,36,.72); border-radius: .5rem; text-align: center; white-space: nowrap; }
+.exl { display: block; font-size: .65rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #7d8fa3; margin-bottom: .25rem; }
+.exv { display: block; font-size: 1.05rem; font-weight: 500; color: #e6edf5; line-height: 1.35; }
+.exs { display: block; font-size: .7rem; color: #9fb0c3; margin-top: .05rem; }
+.exv i { font-style: normal; font-size: .6rem; margin-right: .2rem; }
+.exv .up { color: #f2c14e; }
+.exv .dn2 { color: #ff9f43; }
+.exv .dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; margin-right: .3rem; }
 #temp { font-size: 4.6rem; font-weight: 300; line-height: 1; letter-spacing: -.02em; }
 #wdesc { font-size: 1.25rem; font-weight: 400; color: #9fb0c3; margin-top: .4rem; }
 .days { display: flex; justify-content: flex-end; margin-top: .7rem; }
