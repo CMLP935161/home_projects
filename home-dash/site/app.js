@@ -309,3 +309,18 @@ tick(); load();
 setInterval(tick, 10000);
 setInterval(load, 5 * 60 * 1000);
 setInterval(pollLive, POLL_MS);
+
+/* Tap anywhere once to hide the browser bars (browsers only allow full screen after a tap) */
+(function () {
+  var de = document.documentElement;
+  var req = de.requestFullscreen || de.webkitRequestFullscreen || de.mozRequestFullScreen || de.msRequestFullscreen;
+  if (!req) { return; }
+  function go() {
+    try { req.call(de); } catch (e) {}
+  }
+  function isFull() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+  }
+  document.addEventListener("click", function () { if (!isFull()) { go(); } }, false);
+  document.addEventListener("touchend", function () { if (!isFull()) { go(); } }, false);
+})();
