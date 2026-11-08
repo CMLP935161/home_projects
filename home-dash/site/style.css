@@ -94,7 +94,10 @@ body {
 .sc + .dash { margin: 0; }
 .gs { font-size: .8rem; color: #9fb0c3; text-align: right; margin-left: .6rem; white-space: nowrap; }
 .gi.live .gs { color: #ff8a8a; font-weight: 600; }
-.gi.redz { background: #2a1518; }
+.gi.redz { background: #7a1620; border-left-color: #ff3b3b !important; box-shadow: 0 0 0 .1rem #ff3b3b inset, 0 0 .9rem rgba(255, 59, 59, .55); -webkit-animation: rzpulse 2.4s ease-in-out infinite; animation: rzpulse 2.4s ease-in-out infinite; }
+.gi.redz .gs, .gi.redz .dn { color: #fff; }
+@-webkit-keyframes rzpulse { 50% { background: #5a1019; } }
+@keyframes rzpulse { 50% { background: #5a1019; } }
 .rz { display: inline-block; background: #ff5252; color: #1a0a0c; font-size: .68rem; font-weight: 800; letter-spacing: .08em; padding: .08rem .4rem; border-radius: .25rem; margin-right: .35rem; }
 .dn { font-size: .72rem; font-weight: 500; color: #cfd9e4; margin-right: .35rem; }
 .rzl { display: none; }

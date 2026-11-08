@@ -198,7 +198,6 @@ function gameHtml(g) {
   var color = g.live ? "#ff5252" : (g.fav ? (LG_COLORS[g.league] || "#9fb0c3") : "#2b3a4d");
   var fl = activeFlash(g.league + a.abbr + "@" + h.abbr);
   var st = esc(g.status);
-  if (g.redzone) { st = "<span class='rz'><span class='rzl'>RED ZONE</span><span class='rzs'>RZ</span></span> " + st; }
   var dn = g.down ? "<span class='dn'>" + esc(g.down) + "</span>" : "";
   return "<div class='g'><div class='gi" + (g.live ? " live" : "") + (g.redzone ? " redz" : "") + "' style='border-left-color:" + color + "'>" +
     "<div class='gm'>" + teamHtml(a, fl, g.poss) + mid + teamHtml(h, fl, g.poss) + (g.spread ? "<span class='sp'>" + esc(g.spread) + "</span>" : "") + "</div>" +
