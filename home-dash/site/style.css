@@ -167,3 +167,5 @@ body {
 
 .sp { font-size: .75rem; font-weight: 500; color: #9fb0c3; margin-left: .4rem; white-space: nowrap; }
 
+.wi { vertical-align: middle; margin-top: -.1em; }
+#temp .wi { margin-right: .1em; }

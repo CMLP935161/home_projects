@@ -156,7 +156,13 @@ def build_weather_nws(now):
 
 
 def night_icon(icon, is_day):
-    return "\U0001F319" if (not is_day and icon in ("☀️", "\U0001F324️")) else icon
+    if is_day:
+        return icon
+    if icon in ("☀️", "\U0001F324️"):
+        return "\U0001F319"
+    if icon == "⛅":
+        return "\U0001F319☁️"
+    return icon
 
 
 def om_supplement(now):
