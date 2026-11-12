@@ -8,6 +8,7 @@ function esc(s) {
 
 function tick() {
   renderHourly();
+  renderWxHourly();
   var d = new Date();
   var h = d.getHours(), m = d.getMinutes();
   var ap = h >= 12 ? "PM" : "AM";
@@ -349,9 +350,58 @@ function renderForecast() {
   el.style.display = "";
 }
 
+/* ---- Weather-only page (room.html) ---- */
+function renderWxHourly() {
+  var el = $("wxhourly");
+  if (!el || !DATA || !DATA.weather || !DATA.weather.hourly) { return; }
+  var now = new Date().getTime() / 1000, hrs = DATA.weather.hourly, out = "", n = 0;
+  for (var i = 0; i < hrs.length && n < 8; i++) {
+    var x = hrs[i];
+    if (x.t <= now) { continue; }
+    var pop = (x.pop !== null && x.pop !== undefined && x.pop >= 20) ? x.pop + "%" : "&nbsp;";
+    out += "<div class='wh'><b>" + hourLabel(x.t) + "</b>" + wx(x.icon, "1.8em") + "<span class='wt'>" + x.temp + "&deg;</span><span class='wp'>" + pop + "</span></div>";
+    n++;
+  }
+  if (el.getAttribute("data-k") !== out) { el.innerHTML = out; el.setAttribute("data-k", out); }
+}
+
+function wxTile(label, value, sub) {
+  return "<div class='wtile'><span class='exl'>" + label + "</span><span class='wv'>" + value + "</span>" +
+         (sub ? "<span class='ws'>" + sub + "</span>" : "<span class='ws'>&nbsp;</span>") + "</div>";
+}
+
+function renderWxPage() {
+  if (!$("wxhero") || !DATA) { return; }
+  var w = DATA.weather, ex = DATA.extras || {};
+  if (w) {
+    $("wxhero").innerHTML = "<div class='wxicon'>" + wx(nowIcon(w.icon), "100%") + "</div>" +
+      "<div class='wxtemp'>" + w.temp + "&deg;<span class='wxf'>F</span></div>" +
+      "<div class='wxdesc'>" + esc(w.desc || "") + "</div>" +
+      ((w.hi !== null && w.hi !== undefined && w.lo !== null && w.lo !== undefined) ? "<div class='wxhl'>H " + w.hi + "&deg; &nbsp; L " + w.lo + "&deg;</div>" : "");
+  }
+  var t = "", pop = null, hr = (w && w.hourly) || [], nowS = new Date().getTime() / 1000;
+  for (var i = 0; i < hr.length; i++) { if (hr[i].t > nowS) { pop = hr[i].pop; break; } }
+  if (ex.feels !== undefined) { t += wxTile("Feels like", ex.feels + "&deg;", ""); }
+  if (ex.humidity !== null && ex.humidity !== undefined) { t += wxTile("Humidity", ex.humidity + "%", ""); }
+  if (pop !== null && pop !== undefined) { t += wxTile("Rain chance", pop + "%", "next hour"); }
+  if (ex.cloud !== undefined) { t += wxTile("Cloud cover", ex.cloud + "%", ""); }
+  if (ex.uv !== undefined) { t += wxTile("UV index", ex.uv, esc(ex.uv_label || "")); }
+  if (ex.wind) {
+    t += wxTile("Wind", ex.wind.mph + " mph" + (ex.wind.dir ? " " + ex.wind.dir : ""), ex.wind.gust ? "gusts " + ex.wind.gust : "");
+  }
+  if (ex.aqi) {
+    var a = ex.aqi.aqi, ac = a <= 50 ? "#7bd88f" : a <= 100 ? "#f2c14e" : a <= 150 ? "#ff9f43" : "#ff6b6b";
+    t += wxTile("Air quality", "<i class='dot' style='background:" + ac + "'></i>" + a, esc(ex.aqi.label));
+  }
+  if (ex.sun) { t += wxTile("Sunrise", esc(ex.sun.rise), "sunset " + esc(ex.sun.set)); }
+  $("wxtiles").innerHTML = t;
+  renderWxHourly();
+}
+
 function render() {
   if (!DATA) { return; }
   renderHourly();
+  renderWxPage();
   renderForecast();
   var w = DATA.weather;
   if ($("temp")) {

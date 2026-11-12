@@ -297,8 +297,46 @@ def build_air_quality():
     return {"aqi": v, "label": aqi_category(v)}
 
 
+def compass(deg):
+    pts = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    return pts[int((deg % 360) / 45 + .5) % 8]
+
+
+def uv_label(v):
+    for top, label in ((2, "Low"), (5, "Moderate"), (7, "High"), (10, "Very high")):
+        if v < top + 1 and v <= top:
+            return label
+    return "Extreme"
+
+
+def build_conditions():
+    """Feels-like, cloud cover, UV and wind from Open-Meteo's current conditions."""
+    d = get_json("https://api.open-meteo.com/v1/forecast"
+                 f"?latitude={LAT}&longitude={LON}"
+                 "&current=apparent_temperature,cloud_cover,uv_index,wind_speed_10m,wind_gusts_10m,wind_direction_10m"
+                 "&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FLos_Angeles")
+    c = d["current"]
+    out = {}
+    if c.get("apparent_temperature") is not None:
+        out["feels"] = round(c["apparent_temperature"])
+    if c.get("cloud_cover") is not None:
+        out["cloud"] = round(c["cloud_cover"])
+    if c.get("uv_index") is not None:
+        out["uv"] = round(c["uv_index"])
+        out["uv_label"] = uv_label(round(c["uv_index"]))
+    if c.get("wind_speed_10m") is not None:
+        out["wind"] = {"mph": round(c["wind_speed_10m"]),
+                       "gust": round(c["wind_gusts_10m"]) if c.get("wind_gusts_10m") is not None else None,
+                       "dir": compass(c["wind_direction_10m"]) if c.get("wind_direction_10m") is not None else None}
+    return out
+
+
 def build_extras(now, weather):
     ex = {"sun": None, "aqi": None, "humidity": (weather or {}).get("humidity")}
+    try:
+        ex.update(build_conditions())
+    except Exception:
+        pass
     try:
         ex["sun"] = sun_times(now)
     except Exception:

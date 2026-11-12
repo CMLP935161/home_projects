@@ -2,20 +2,20 @@
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Clock &amp; Weather</title>
+<title>Weather</title>
 <link rel="stylesheet" href="style.css">
-</head><body class="main">
+</head><body class="wx">
 <div class="wrap">
-  <div class="top">
-    <div><div id="clock"></div><div id="date"></div><div id="stale"></div></div>
-    <div class="extras" id="extras"></div>
-    <div class="weather">
-      <div id="temp"></div><div id="wdesc"></div><div class="days" id="hourly"></div>
-    </div>
+  <div class="wxhead">
+    <div class="wxplace">Costa Mesa, CA</div>
+    <div class="wxwhen"><span id="clock"></span><span id="date"></span></div>
   </div>
-  <div class="scores" id="scores"></div>
+  <div class="wxmain">
+    <div class="wxhero" id="wxhero"></div>
+    <div class="wxtiles" id="wxtiles"></div>
+  </div>
+  <div class="wxhourly" id="wxhourly"></div>
   <div class="fc" id="forecast"></div>
-  <div class="notes" id="notes"></div>
   <div id="updated"></div>
 </div>
 <script src="app.js"></script>
